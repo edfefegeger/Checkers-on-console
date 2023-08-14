@@ -1,0 +1,506 @@
+#include <iostream>
+#include <stdlib.h>
+class GamePiece  //класс родитель
+{
+public:
+    GamePiece(char PieceColor) : mPieceColor(PieceColor) {}
+    ~GamePiece() {}
+    virtual char GetPiece() = 0;
+    char GetColor() {
+        return mPieceColor;
+    }           
+    bool IsLegalMove(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8])  {
+        GamePiece* qpDest = GameBoard[iDestRow][iDestCol]; // 
+        if ((qpDest == 0) || (mPieceColor != qpDest->GetColor())) {
+            return AreSquaresLegal(iSrcRow, iSrcCol, iDestRow, iDestCol, GameBoard);
+        }
+        return false;
+    }
+private:
+    virtual bool AreSquaresLegal(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8]) = 0; //Какой квадрат
+    char mPieceColor; // цвет
+};
+
+class PawnPiece : public GamePiece // пешка 
+{
+public:
+    PawnPiece(char PieceColor) : GamePiece(PieceColor) {}
+    ~PawnPiece() {}
+private:
+    virtual char GetPiece() {
+        return 'P';
+    }
+    bool AreSquaresLegal(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8]) {
+        GamePiece* qpDest = GameBoard[iDestRow][iDestCol];
+        if (qpDest == 0) {
+            // все свободно для хода
+            //Проверка на ход
+            if (iSrcCol == iDestCol) {
+                if (GetColor() == 'W') {
+                    if (iDestRow == iSrcRow + 1) {
+                        return true;
+                    }
+                }
+                else {
+                    if (iDestRow == iSrcRow - 1) {
+                        return true;
+                    }
+                }
+            }
+        }
+        else {
+            // занято противоположными
+            if ((iSrcCol == iDestCol + 1) || (iSrcCol == iDestCol - 1)) {
+                if (GetColor() == 'W') {
+                    if (iDestRow == iSrcRow + 1) {
+                        return true;
+                    }
+                }
+                else {
+                    if (iDestRow == iSrcRow - 1) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+};
+
+class KnightPiece : public GamePiece // конь
+{
+public:
+    KnightPiece(char PieceColor) : GamePiece(PieceColor) {}
+    ~KnightPiece() {}
+private:
+    virtual char GetPiece() {
+        return 'N';
+    }
+    bool AreSquaresLegal(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8]) {
+        // квадратя занят или занят друим цыетом
+        if ((iSrcCol == iDestCol + 1) || (iSrcCol == iDestCol - 1)) {
+            if ((iSrcRow == iDestRow + 2) || (iSrcRow == iDestRow - 2)) {
+                return true;
+            }
+        }
+        if ((iSrcCol == iDestCol + 2) || (iSrcCol == iDestCol - 2)) {
+            if ((iSrcRow == iDestRow + 1) || (iSrcRow == iDestRow - 1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+class BishopPiece : public GamePiece // слон
+{
+public:
+    BishopPiece(char PieceColor) : GamePiece(PieceColor) {}
+    ~BishopPiece() {}
+private:
+    virtual char GetPiece() {
+        return 'B';
+    }
+    bool AreSquaresLegal(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8]) {
+        if ((iDestCol - iSrcCol == iDestRow - iSrcRow) || (iDestCol - iSrcCol == iSrcRow - iDestRow)) {
+            //  Проверка, что все промежуточные квадраты пусты
+            int iRowOffset = (iDestRow - iSrcRow > 0) ? 1 : -1;
+            int iColOffset = (iDestCol - iSrcCol > 0) ? 1 : -1;
+            int iCheckRow;
+            int iCheckCol;
+            for (iCheckRow = iSrcRow + iRowOffset, iCheckCol = iSrcCol + iColOffset;
+                iCheckRow != iDestRow;
+                iCheckRow = iCheckRow + iRowOffset, iCheckCol = iCheckCol + iColOffset)
+            {
+                if (GameBoard[iCheckRow][iCheckCol] != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+};
+
+class RookPiece : public GamePiece // ладья
+{
+public:
+    RookPiece(char PieceColor) : GamePiece(PieceColor) {}
+    ~RookPiece() {}
+private:
+    virtual char GetPiece() {
+        return 'R';
+    }
+    bool AreSquaresLegal(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8]) {
+        if (iSrcRow == iDestRow) {
+            //  Проверка, что все промежуточные квадраты пусты
+            int iColOffset = (iDestCol - iSrcCol > 0) ? 1 : -1;
+            for (int iCheckCol = iSrcCol + iColOffset; iCheckCol != iDestCol; iCheckCol = iCheckCol + iColOffset) {
+                if (GameBoard[iSrcRow][iCheckCol] != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        else if (iDestCol == iSrcCol) {
+            //  Проверка, что все промежуточные квадраты пусты
+            int iRowOffset = (iDestRow - iSrcRow > 0) ? 1 : -1;
+            for (int iCheckRow = iSrcRow + iRowOffset; iCheckRow != iDestRow; iCheckRow = iCheckRow + iRowOffset) {
+                if (GameBoard[iCheckRow][iSrcCol] != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+};
+
+class QueenPiece : public GamePiece // королева
+{
+public:
+    QueenPiece(char PieceColor) : GamePiece(PieceColor) {}
+    ~QueenPiece() {}
+private:
+    virtual char GetPiece() {
+        return 'Q';
+    }
+    bool AreSquaresLegal(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8]) {
+        if (iSrcRow == iDestRow) {
+            //  Проверка, что все промежуточные квадраты пусты
+            int iColOffset = (iDestCol - iSrcCol > 0) ? 1 : -1;
+            for (int iCheckCol = iSrcCol + iColOffset; iCheckCol != iDestCol; iCheckCol = iCheckCol + iColOffset) {
+                if (GameBoard[iSrcRow][iCheckCol] != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        else if (iDestCol == iSrcCol) {
+            //  Проверка, что все промежуточные квадраты пусты
+            int iRowOffset = (iDestRow - iSrcRow > 0) ? 1 : -1;
+            for (int iCheckRow = iSrcRow + iRowOffset; iCheckRow != iDestRow; iCheckRow = iCheckRow + iRowOffset) {
+                if (GameBoard[iCheckRow][iSrcCol] != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        else if ((iDestCol - iSrcCol == iDestRow - iSrcRow) || (iDestCol - iSrcCol == iSrcRow - iDestRow)) {
+            //  Проверка, что все промежуточные квадраты пусты
+            int iRowOffset = (iDestRow - iSrcRow > 0) ? 1 : -1;
+            int iColOffset = (iDestCol - iSrcCol > 0) ? 1 : -1;
+            int iCheckRow;
+            int iCheckCol;
+            for (iCheckRow = iSrcRow + iRowOffset, iCheckCol = iSrcCol + iColOffset;
+                iCheckRow != iDestRow;
+                iCheckRow = iCheckRow + iRowOffset, iCheckCol = iCheckCol + iColOffset)
+            {
+                if (GameBoard[iCheckRow][iCheckCol] != 0) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+};
+
+class KingPiece : public GamePiece // король
+{
+public:
+    KingPiece(char PieceColor) : GamePiece(PieceColor) {}
+    ~KingPiece() {}
+private:
+    virtual char GetPiece() {
+        return 'K';
+    }
+    bool AreSquaresLegal(int iSrcRow, int iSrcCol, int iDestRow, int iDestCol, GamePiece* GameBoard[8][8]) {
+        int iRowDelta = iDestRow - iSrcRow;
+        int iColDelta = iDestCol - iSrcCol;
+        if (((iRowDelta >= -1) && (iRowDelta <= 1)) &&
+            ((iColDelta >= -1) && (iColDelta <= 1)))
+        {
+            return true;
+        }
+        return false;
+    }
+};
+
+class CBoard // доска
+{
+public:
+    CBoard() {
+        for (int iRow = 0; iRow < 8; ++iRow) {
+            for (int iCol = 0; iCol < 8; ++iCol) {
+                MainGameBoard[iRow][iCol] = 0;
+            }
+        }
+        for (int iCol = 0; iCol < 8; ++iCol) {
+            MainGameBoard[6][iCol] = new PawnPiece('B');
+        }//черные фигуры
+        MainGameBoard[7][0] = new RookPiece('B');
+        MainGameBoard[7][1] = new KnightPiece('B');
+        MainGameBoard[7][2] = new BishopPiece('B');
+        MainGameBoard[7][3] = new KingPiece('B');
+        MainGameBoard[7][4] = new QueenPiece('B');
+        MainGameBoard[7][5] = new BishopPiece('B');
+        MainGameBoard[7][6] = new KnightPiece('B');
+        MainGameBoard[7][7] = new RookPiece('B');
+        //белые фигуры
+        for (int iCol = 0; iCol < 8; ++iCol) {
+            MainGameBoard[1][iCol] = new PawnPiece('W');
+        }
+        MainGameBoard[0][0] = new RookPiece('W');
+        MainGameBoard[0][1] = new KnightPiece('W');
+        MainGameBoard[0][2] = new BishopPiece('W');
+        MainGameBoard[0][3] = new KingPiece('W');
+        MainGameBoard[0][4] = new QueenPiece('W');
+        MainGameBoard[0][5] = new BishopPiece('W');
+        MainGameBoard[0][6] = new KnightPiece('W');
+        MainGameBoard[0][7] = new RookPiece('W');
+    }
+    ~CBoard() {
+        for (int iRow = 0; iRow < 8; ++iRow) {
+            for (int iCol = 0; iCol < 8; ++iCol) {
+                delete MainGameBoard[iRow][iCol];
+                MainGameBoard[iRow][iCol] = 0;
+            }
+        }
+    }
+
+    void Print() {
+        using namespace std;
+        const int kiSquareWidth = 4;
+        const int kiSquareHeight = 3;
+        for (int iRow = 0; iRow < 8 * kiSquareHeight; ++iRow) {
+            int iSquareRow = iRow / kiSquareHeight;
+            // номеров по краям
+            if (iRow % 3 == 1) {
+                cout << '-' << (char)('1' + 7 - iSquareRow) << '-';
+            }
+            else {
+                cout << "---";
+            }
+            // вывод доски
+            for (int iCol = 0; iCol < 8 * kiSquareWidth; ++iCol) {
+                int iSquareCol = iCol / kiSquareWidth;
+                if (((iRow % 3) == 1) && ((iCol % 4) == 1 || (iCol % 4) == 2) && MainGameBoard[7 - iSquareRow][iSquareCol] != 0) {
+                    if ((iCol % 4) == 1) {
+                        cout << MainGameBoard[7 - iSquareRow][iSquareCol]->GetColor();
+                    }
+                    else {
+                        cout << MainGameBoard[7 - iSquareRow][iSquareCol]->GetPiece();
+                    }
+                }
+                else {
+                    if ((iSquareRow + iSquareCol) % 2 == 1) {
+                        cout << '*';
+                    }
+                    else {
+                        cout << ' ';
+                    }
+                }
+            }
+            cout << endl;
+        }
+        for (int iRow = 0; iRow < kiSquareHeight; ++iRow) {
+            if (iRow % 3 == 1) {
+                cout << "---";
+                for (int iCol = 0; iCol < 8 * kiSquareWidth; ++iCol) {
+                    int iSquareCol = iCol / kiSquareWidth;
+                    if ((iCol % 4) == 1) {
+                        cout << (iSquareCol + 1);
+                    }
+                    else {
+                        cout << '-';
+                    }
+                }
+                cout << endl;
+            }
+            else {
+                for (int iCol = 1; iCol < 9 * kiSquareWidth; ++iCol) {
+                    cout << '-';
+                }
+                cout << endl;
+            }
+        }
+    }
+
+    bool IsInCheck(char PieceColor) {
+        // поиск короля 
+        int iKingRow;
+        int iKingCol;
+        for (int iRow = 0; iRow < 8; ++iRow) {
+            for (int iCol = 0; iCol < 8; ++iCol) {
+                if (MainGameBoard[iRow][iCol] != 0) {
+                    if (MainGameBoard[iRow][iCol]->GetColor() == PieceColor) {
+                        if (MainGameBoard[iRow][iCol]->GetPiece() == 'K') {
+                            iKingRow = iRow;
+                            iKingCol = iCol;
+                        }
+                    }
+                }
+            }
+        }
+        // проверка на мат
+        for (int iRow = 0; iRow < 8; ++iRow) {
+            for (int iCol = 0; iCol < 8; ++iCol) {
+                if (MainGameBoard[iRow][iCol] != 0) {
+                    if (MainGameBoard[iRow][iCol]->GetColor() != PieceColor) {
+                        if (MainGameBoard[iRow][iCol]->IsLegalMove(iRow, iCol, iKingRow, iKingCol, MainGameBoard)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool CanMove(char PieceColor) {
+        // ПРобежаться по всему полю
+        for (int iRow = 0; iRow < 8; ++iRow) {
+            for (int iCol = 0; iCol < 8; ++iCol) {
+                if (MainGameBoard[iRow][iCol] != 0) {
+                    // если это фигура игрока то проверитьо на наличие вариантов хода
+                    if (MainGameBoard[iRow][iCol]->GetColor() == PieceColor) {
+                        for (int iMoveRow = 0; iMoveRow < 8; ++iMoveRow) {
+                            for (int iMoveCol = 0; iMoveCol < 8; ++iMoveCol) {
+                                if (MainGameBoard[iRow][iCol]->IsLegalMove(iRow, iCol, iMoveRow, iMoveCol, MainGameBoard)) {
+                                    // сделать ход и проверить на мат
+                                    GamePiece* qpTemp = MainGameBoard[iMoveRow][iMoveCol];
+                                    MainGameBoard[iMoveRow][iMoveCol] = MainGameBoard[iRow][iCol];
+                                    MainGameBoard[iRow][iCol] = 0;
+                                    bool bCanMove = !IsInCheck(PieceColor);
+                                    MainGameBoard[iRow][iCol] = MainGameBoard[iMoveRow][iMoveCol];
+                                    MainGameBoard[iMoveRow][iMoveCol] = qpTemp;
+                                    if (bCanMove) {
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    GamePiece* MainGameBoard[8][8];
+};
+
+class ChessBoard
+{
+public:
+    ChessBoard() : mcPlayerTurn('W') {}
+    ~ChessBoard() {}
+
+    void Start() {
+        do {
+            GetNextMove(mqGameBoard.MainGameBoard);
+            AlternateTurn();
+        } while (!IsGameOver());
+        mqGameBoard.Print();
+    }
+
+    void GetNextMove(GamePiece* GameBoard[8][8]) {
+        using namespace std;
+        bool bValidMove = false;
+        do {
+            system("clear");
+            cout << endl << endl << "          Welcome to Chess Game Developed by Cppsecrets " << endl << endl << endl;
+            cout << "                      Keys to sysmbols used " << endl << endl << endl;
+            cout << " * = white space" << endl;
+            cout << " Blank space = black space" << endl;
+            cout << " WP = White pawn &  BP = Black pawn" << endl;
+            cout << " WN = White Knight & BN = Black Knight" << endl;
+            cout << " WB = White Bishop & BB = Black Bishop" << endl;
+            cout << " WR = White Rook & BR = Black Rook" << endl;
+            cout << " WQ = White Queen & BQ = Black Queen" << endl;
+            cout << " WK = White King & BK =Black King" << endl;
+            cout << "Rule for move is :" << endl;
+            cout << "Move by selecting row & column to another valid location using row & column" << endl << endl << endl;
+            mqGameBoard.Print();
+
+            // получение х у для ходы 
+            cout << mcPlayerTurn << "'s Move: ";
+            int iStartMove;
+            cin >> iStartMove;
+            int iStartRow = (iStartMove / 10) - 1;
+            int iStartCol = (iStartMove % 10) - 1;
+
+            cout << "To: ";
+            int iEndMove;
+            cin >> iEndMove;
+            int iEndRow = (iEndMove / 10) - 1;
+            int iEndCol = (iEndMove % 10) - 1;
+
+            //проверки
+            if ((iStartRow >= 0 && iStartRow <= 7) &&
+                (iStartCol >= 0 && iStartCol <= 7) &&
+                (iEndRow >= 0 && iEndRow <= 7) &&
+                (iEndCol >= 0 && iEndCol <= 7)) {
+                GamePiece* qpCurrPiece = GameBoard[iStartRow][iStartCol];
+                // проверка цыета
+                if ((qpCurrPiece != 0) && (qpCurrPiece->GetColor() == mcPlayerTurn))
+                {
+                    if (qpCurrPiece->IsLegalMove(iStartRow, iStartCol, iEndRow, iEndCol, GameBoard))
+                    {
+                        // ход
+                        GamePiece* qpTemp = GameBoard[iEndRow][iEndCol];
+                        GameBoard[iEndRow][iEndCol] = GameBoard[iStartRow][iStartCol];
+                        GameBoard[iStartRow][iStartCol] = 0;
+                        if (!mqGameBoard.IsInCheck(mcPlayerTurn))
+                        {
+                            delete qpTemp;
+                            bValidMove = true;
+                        }
+                        else
+                        {
+                            GameBoard[iStartRow][iStartCol] = GameBoard[iEndRow][iEndCol];
+                            GameBoard[iEndRow][iEndCol] = qpTemp;
+                        }
+                    }
+                }
+            }
+            if (!bValidMove) {
+                cout << "Invalid Move!" << endl;
+            }
+        } while (!bValidMove);
+    }
+
+    void AlternateTurn() {
+        mcPlayerTurn = (mcPlayerTurn == 'W') ? 'B' : 'W';
+    }
+
+    bool IsGameOver() {
+        // просверка на мат
+        bool bCanMove(false);
+        bCanMove = mqGameBoard.CanMove(mcPlayerTurn);
+        if (!bCanMove) {
+            if (mqGameBoard.IsInCheck(mcPlayerTurn)) {
+                AlternateTurn();
+                std::cout << "Checkmate, " << mcPlayerTurn << " Wins!" << std::endl;
+            }
+            else {
+                std::cout << "Stalemate!" << std::endl;
+            }
+        }
+        return !bCanMove;
+    }
+private:
+    CBoard mqGameBoard;
+    char mcPlayerTurn;
+};
+
+int main() {
+    ChessBoard qGame;
+    qGame.Start();
+    return 0;
+}
+
+// 
+
